@@ -10,6 +10,7 @@ Scientific Computing
 Janelia Research Campus
 """
 
+import struct
 import jenkins_cffi
 import h5py
 
@@ -123,12 +124,24 @@ def move_fadb_to_end(filename):
         f.seek(fadb_position)
         f.write(bytes(len(fadb_bytes)))
 
+def read_zarr_shard_chunk_metadata(filename):
+    with open(filename, "rb") as f:
+        f.seek(-2*8*16-4, 2)
+        b = f.read(2*8*16)
+        offset_nbyte_pairs = [x for x in struct.iter_unpack("<qq", b)]
+    return offset_nbyte_pairs
+
+
 def demo(filename = "hdf5_zarr_shard_demo.h5"):
     write_simple_chunked("original_" + filename)
     write_simple_chunked(filename)
     move_fadb_to_end(filename)
     with h5py.File(filename, "r") as f:
+        print("Data via h5py:")
         print(f["zarrshard"][:])
+    print("")
+    print("Zarr Shard Chunk Offset Nbyte Pairs:")
+    print(read_zarr_shard_chunk_metadata(filename))
 
 if __name__ == "__main__":
     demo()
